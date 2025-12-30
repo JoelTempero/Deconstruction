@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DECONSTRUCTION - Card Generator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Main Menu -->
+        <div id="main-menu" class="screen active">
+            <div class="logo-container">
+                <h1 class="game-title">DECONSTRUCTION</h1>
+                <p class="tagline">Build your church. Survive the rapture.</p>
+            </div>
+            <div class="menu-buttons">
+                <button class="btn btn-primary" onclick="showScreen('card-drawer')">
+                    <span class="btn-icon">🎴</span>
+                    Draw Cards
+                </button>
+                <button class="btn btn-secondary" onclick="showScreen('fame-cards')">
+                    <span class="btn-icon">⭐</span>
+                    Fame Cards Reference
+                </button>
+                <button class="btn btn-admin" onclick="showScreen('pin-entry')">
+                    <span class="btn-icon">🔐</span>
+                    Admin Access
+                </button>
+            </div>
+            <div class="game-info">
+                <p>A 2-8 player church building game</p>
+            </div>
+        </div>
+
+        <!-- Card Drawer Screen -->
+        <div id="card-drawer" class="screen">
+            <button class="back-btn" onclick="showScreen('main-menu')">← Back</button>
+            <h2>Draw a Card</h2>
+
+            <div class="expansion-selector">
+                <label>Active Expansions:</label>
+                <div class="expansion-toggles" id="expansion-toggles">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+
+            <div class="card-type-buttons">
+                <button class="btn btn-spirit" onclick="drawCard('spirit')">
+                    <span class="card-icon">👻</span>
+                    <span>Spirit Card</span>
+                </button>
+                <button class="btn btn-choice" onclick="drawCard('choice')">
+                    <span class="card-icon">⚖️</span>
+                    <span>Choice Card</span>
+                </button>
+            </div>
+
+            <div id="card-display" class="card-display hidden">
+                <!-- Card will be displayed here -->
+            </div>
+
+            <div id="card-history" class="card-history">
+                <h3>Recently Drawn</h3>
+                <div id="history-list"></div>
+            </div>
+        </div>
+
+        <!-- Fame Cards Reference -->
+        <div id="fame-cards" class="screen">
+            <button class="back-btn" onclick="showScreen('main-menu')">← Back</button>
+            <h2>Fame Cards Reference</h2>
+            <div id="fame-cards-list" class="fame-cards-grid">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- PIN Entry Screen -->
+        <div id="pin-entry" class="screen">
+            <button class="back-btn" onclick="showScreen('main-menu')">← Back</button>
+            <h2>Admin Access</h2>
+            <div class="pin-container">
+                <p>Enter PIN to access admin panel</p>
+                <input type="password" id="pin-input" maxlength="4" placeholder="****" onkeyup="checkPin(event)">
+                <button class="btn btn-primary" onclick="verifyPin()">Enter</button>
+                <p id="pin-error" class="error-text hidden">Incorrect PIN</p>
+            </div>
+        </div>
+
+        <!-- Admin Panel -->
+        <div id="admin-panel" class="screen">
+            <button class="back-btn" onclick="logoutAdmin()">← Logout</button>
+            <h2>Admin Panel</h2>
+
+            <div class="admin-tabs">
+                <button class="tab-btn active" onclick="switchAdminTab('spirit')">Spirit Cards</button>
+                <button class="tab-btn" onclick="switchAdminTab('choice')">Choice Cards</button>
+                <button class="tab-btn" onclick="switchAdminTab('fame')">Fame Cards</button>
+                <button class="tab-btn" onclick="switchAdminTab('expansions')">Expansions</button>
+            </div>
+
+            <!-- Spirit Cards Admin -->
+            <div id="admin-spirit" class="admin-section active">
+                <div class="admin-header">
+                    <h3>Spirit Cards</h3>
+                    <button class="btn btn-add" onclick="openCardModal('spirit')">+ Add Spirit Card</button>
+                </div>
+                <div class="filter-bar">
+                    <select id="spirit-expansion-filter" onchange="filterCards('spirit')">
+                        <option value="all">All Expansions</option>
+                    </select>
+                </div>
+                <div id="spirit-cards-admin" class="admin-cards-list">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Choice Cards Admin -->
+            <div id="admin-choice" class="admin-section">
+                <div class="admin-header">
+                    <h3>Choice Cards</h3>
+                    <button class="btn btn-add" onclick="openCardModal('choice')">+ Add Choice Card</button>
+                </div>
+                <div class="filter-bar">
+                    <select id="choice-expansion-filter" onchange="filterCards('choice')">
+                        <option value="all">All Expansions</option>
+                    </select>
+                </div>
+                <div id="choice-cards-admin" class="admin-cards-list">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Fame Cards Admin -->
+            <div id="admin-fame" class="admin-section">
+                <div class="admin-header">
+                    <h3>Fame Cards</h3>
+                    <button class="btn btn-add" onclick="openCardModal('fame')">+ Add Fame Card</button>
+                </div>
+                <div id="fame-cards-admin" class="admin-cards-list">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Expansions Admin -->
+            <div id="admin-expansions" class="admin-section">
+                <div class="admin-header">
+                    <h3>Expansion Packs</h3>
+                    <button class="btn btn-add" onclick="openExpansionModal()">+ Add Expansion</button>
+                </div>
+                <div id="expansions-admin" class="admin-cards-list">
+                    <!-- Populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Card Modal -->
+        <div id="card-modal" class="modal hidden">
+            <div class="modal-content">
+                <button class="modal-close" onclick="closeCardModal()">×</button>
+                <h3 id="modal-title">Add Card</h3>
+                <form id="card-form" onsubmit="saveCard(event)">
+                    <input type="hidden" id="card-id">
+                    <input type="hidden" id="card-type">
+
+                    <div class="form-group">
+                        <label for="card-text">Card Text</label>
+                        <textarea id="card-text" required></textarea>
+                    </div>
+
+                    <div id="spirit-fields" class="card-type-fields">
+                        <div class="form-group">
+                            <label for="spirit-consequence">Consequence</label>
+                            <textarea id="spirit-consequence" placeholder="e.g., Gain 1 Elder and 1 Family"></textarea>
+                        </div>
+                    </div>
+
+                    <div id="choice-fields" class="card-type-fields hidden">
+                        <div class="form-group">
+                            <label for="choice-a-text">Choice A Text</label>
+                            <input type="text" id="choice-a-text" placeholder="e.g., Allow them to speak">
+                        </div>
+                        <div class="form-group">
+                            <label for="choice-a-consequence">Choice A Consequence</label>
+                            <textarea id="choice-a-consequence" placeholder="e.g., Gain 1 Fame card and 1 Complaint card"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="choice-b-text">Choice B Text</label>
+                            <input type="text" id="choice-b-text" placeholder="e.g., Politely decline">
+                        </div>
+                        <div class="form-group">
+                            <label for="choice-b-consequence">Choice B Consequence</label>
+                            <textarea id="choice-b-consequence" placeholder="e.g., Gain 1 Staff and 1 Endurance"></textarea>
+                        </div>
+                    </div>
+
+                    <div id="fame-fields" class="card-type-fields hidden">
+                        <div class="form-group">
+                            <label for="fame-roll">Roll Number (2-12)</label>
+                            <input type="number" id="fame-roll" min="2" max="12">
+                        </div>
+                        <div class="form-group">
+                            <label for="fame-reward">Reward</label>
+                            <input type="text" id="fame-reward" placeholder="e.g., 1 Elder">
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="expansion-select-group">
+                        <label for="card-expansion">Expansion Pack</label>
+                        <select id="card-expansion">
+                            <!-- Populated by JavaScript -->
+                        </select>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeCardModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Card</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Expansion Modal -->
+        <div id="expansion-modal" class="modal hidden">
+            <div class="modal-content">
+                <button class="modal-close" onclick="closeExpansionModal()">×</button>
+                <h3 id="expansion-modal-title">Add Expansion Pack</h3>
+                <form id="expansion-form" onsubmit="saveExpansion(event)">
+                    <input type="hidden" id="expansion-id">
+
+                    <div class="form-group">
+                        <label for="expansion-name">Expansion Name</label>
+                        <input type="text" id="expansion-name" required placeholder="e.g., Divine Intervention">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="expansion-description">Description</label>
+                        <textarea id="expansion-description" placeholder="e.g., Situations caused by divine intervention"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="expansion-color">Theme Color</label>
+                        <input type="color" id="expansion-color" value="#6b4c9a">
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeExpansionModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Expansion</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
