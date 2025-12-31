@@ -3,7 +3,9 @@
 // State
 let isAdmin = false;
 let activeExpansions = ['base'];
-let cardHistory = [];
+let currentCard = null;
+let currentCardType = null;
+let choiceMade = false;
 
 // Screen Navigation
 function showScreen(screenId) {
@@ -12,14 +14,17 @@ function showScreen(screenId) {
     });
     document.getElementById(screenId).classList.add('active');
 
-    // Initialize screen-specific content
     if (screenId === 'card-drawer') {
         initExpansionToggles();
-    } else if (screenId === 'fame-cards') {
-        renderFameCardsReference();
+        resetCardDraw();
     } else if (screenId === 'admin-panel') {
         initAdminPanel();
     }
+}
+
+function resetAndGoBack() {
+    resetCardDraw();
+    showScreen('main-menu');
 }
 
 // Expansion Toggles for Card Drawer
@@ -45,7 +50,6 @@ function toggleExpansion(expansionId, isActive) {
         }
     } else {
         activeExpansions = activeExpansions.filter(id => id !== expansionId);
-        // Ensure at least one expansion is active
         if (activeExpansions.length === 0) {
             activeExpansions = ['base'];
         }
@@ -60,96 +64,123 @@ function drawCard(type) {
         return;
     }
 
-    const card = dataManager.drawRandomCard(type, activeExpansions);
-    const expansion = dataManager.getExpansions().find(e => e.id === card.expansion);
+    currentCard = dataManager.drawRandomCard(type, activeExpansions);
+    currentCardType = type;
+    choiceMade = false;
 
-    displayCard(card, type, expansion);
-    addToHistory(card, type);
+    const expansion = dataManager.getExpansions().find(e => e.id === currentCard.expansion);
+
+    // Hide card buttons, show card
+    document.getElementById('card-buttons').classList.add('hidden');
+    document.getElementById('card-display').classList.remove('hidden');
+    document.getElementById('draw-new-container').classList.add('hidden');
+
+    displayCard(currentCard, type, expansion);
 }
 
 function displayCard(card, type, expansion) {
     const container = document.getElementById('card-display');
-    container.classList.remove('hidden');
-
-    let cardHTML = '';
 
     if (type === 'spirit') {
-        cardHTML = `
+        const rewardsHTML = renderRewardIcons(card.rewards);
+        const specialHTML = card.special ? `<div class="special-effect">${card.special}</div>` : '';
+
+        container.innerHTML = `
             <div class="drawn-card spirit">
                 <span class="card-type-label spirit">Spirit Card</span>
                 ${expansion ? `<span class="card-expansion-label">${expansion.name}</span>` : ''}
                 <p class="card-text">${card.text}</p>
                 <div class="card-consequence">
                     <h4>Consequence</h4>
-                    <p>${card.consequence}</p>
+                    <div class="reward-icons">${rewardsHTML}</div>
+                    ${specialHTML}
                 </div>
             </div>
         `;
+        // Show draw new button immediately for spirit cards
+        document.getElementById('draw-new-container').classList.remove('hidden');
+
     } else if (type === 'choice') {
-        cardHTML = `
+        container.innerHTML = `
             <div class="drawn-card choice">
                 <span class="card-type-label choice">Choice Card</span>
                 ${expansion ? `<span class="card-expansion-label">${expansion.name}</span>` : ''}
                 <p class="card-text">${card.text}</p>
                 <div class="choice-options">
-                    <div class="choice-option" onclick="selectChoice(this, 'A')">
+                    <div class="choice-option" onclick="makeChoice('A')" data-choice="A">
                         <div class="choice-label">Choice A</div>
                         <div class="choice-text">${card.choiceA.text}</div>
-                        <div class="choice-consequence">${card.choiceA.consequence}</div>
+                        <div class="choice-consequence hidden-consequence" id="consequence-a">
+                            <h5>Result:</h5>
+                            <div class="reward-icons">${renderRewardIcons(card.choiceA.rewards)}</div>
+                            ${card.choiceA.special ? `<div class="special-effect">${card.choiceA.special}</div>` : ''}
+                        </div>
                     </div>
-                    <div class="choice-option" onclick="selectChoice(this, 'B')">
+                    <div class="choice-option" onclick="makeChoice('B')" data-choice="B">
                         <div class="choice-label">Choice B</div>
                         <div class="choice-text">${card.choiceB.text}</div>
-                        <div class="choice-consequence">${card.choiceB.consequence}</div>
+                        <div class="choice-consequence hidden-consequence" id="consequence-b">
+                            <h5>Result:</h5>
+                            <div class="reward-icons">${renderRewardIcons(card.choiceB.rewards)}</div>
+                            ${card.choiceB.special ? `<div class="special-effect">${card.choiceB.special}</div>` : ''}
+                        </div>
                     </div>
                 </div>
             </div>
         `;
     }
-
-    container.innerHTML = cardHTML;
 }
 
-function selectChoice(element, choice) {
-    // Remove selection from siblings
-    element.parentElement.querySelectorAll('.choice-option').forEach(opt => {
-        opt.classList.remove('selected');
+function makeChoice(choice) {
+    if (choiceMade) return;
+    choiceMade = true;
+
+    const options = document.querySelectorAll('.choice-option');
+    options.forEach(opt => {
+        const optChoice = opt.dataset.choice;
+        if (optChoice === choice) {
+            opt.classList.add('selected', 'revealed');
+            opt.querySelector('.choice-consequence').classList.remove('hidden-consequence');
+        } else {
+            opt.classList.add('disabled');
+        }
     });
-    // Add selection to clicked option
-    element.classList.add('selected');
+
+    // Show draw new button after choice is made
+    document.getElementById('draw-new-container').classList.remove('hidden');
 }
 
-function addToHistory(card, type) {
-    cardHistory.unshift({ card, type, timestamp: Date.now() });
-    if (cardHistory.length > 10) {
-        cardHistory.pop();
+function renderRewardIcons(rewards) {
+    if (!rewards) return '';
+
+    const icons = [];
+    for (const [key, value] of Object.entries(rewards)) {
+        if (value !== 0) {
+            const iconData = REWARD_ICONS[key];
+            if (iconData) {
+                const isGain = value > 0;
+                icons.push(`
+                    <div class="reward-icon ${key} ${isGain ? 'gain' : 'lose'}">
+                        <span class="icon">${iconData.icon}</span>
+                        <span class="amount ${isGain ? 'positive' : 'negative'}">${isGain ? '+' : ''}${value}</span>
+                        <span class="label">${iconData.label}</span>
+                    </div>
+                `);
+            }
+        }
     }
-    renderHistory();
+    return icons.length > 0 ? icons.join('') : '<span style="color: var(--text-muted)">No token changes</span>';
 }
 
-function renderHistory() {
-    const container = document.getElementById('history-list');
-    container.innerHTML = cardHistory.map(item => `
-        <div class="history-item">
-            <span class="type-badge ${item.type}">${item.type}</span>
-            <span>${item.card.text.substring(0, 60)}${item.card.text.length > 60 ? '...' : ''}</span>
-        </div>
-    `).join('');
-}
+function resetCardDraw() {
+    currentCard = null;
+    currentCardType = null;
+    choiceMade = false;
 
-// Fame Cards Reference
-function renderFameCardsReference() {
-    const container = document.getElementById('fame-cards-list');
-    const fameCards = dataManager.getFameCards();
-
-    container.innerHTML = fameCards.map(card => `
-        <div class="fame-card">
-            <span class="fame-roll-number">${card.roll}</span>
-            <div class="fame-card-name">${card.name}</div>
-            <div class="fame-card-reward">Reward: ${card.reward}</div>
-            <div class="fame-card-roll">Roll a ${card.roll} to activate</div>
-        </div>
-    `).join('');
+    document.getElementById('card-buttons').classList.remove('hidden');
+    document.getElementById('card-display').classList.add('hidden');
+    document.getElementById('card-display').innerHTML = '';
+    document.getElementById('draw-new-container').classList.add('hidden');
 }
 
 // PIN Entry
@@ -184,18 +215,15 @@ function initAdminPanel() {
     updateExpansionFilters();
     renderAdminSpiritCards();
     renderAdminChoiceCards();
-    renderAdminFameCards();
     renderAdminExpansions();
 }
 
 function switchAdminTab(tab) {
-    // Update tab buttons
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.remove('active');
     });
     event.target.classList.add('active');
 
-    // Update sections
     document.querySelectorAll('.admin-section').forEach(section => {
         section.classList.remove('active');
     });
@@ -212,7 +240,6 @@ function updateExpansionFilters() {
     document.getElementById('spirit-expansion-filter').innerHTML = optionsHTML;
     document.getElementById('choice-expansion-filter').innerHTML = optionsHTML;
 
-    // Update card modal expansion selector
     const cardExpansionSelect = document.getElementById('card-expansion');
     cardExpansionSelect.innerHTML = expansions.map(exp =>
         `<option value="${exp.id}">${exp.name}</option>`
@@ -236,12 +263,13 @@ function renderAdminSpiritCards() {
     const container = document.getElementById('spirit-cards-admin');
     container.innerHTML = cards.map(card => {
         const exp = expansions.find(e => e.id === card.expansion);
+        const rewardSummary = summarizeRewards(card.rewards);
         return `
             <div class="admin-card-item">
                 <div class="admin-card-content">
                     <div class="admin-card-text">${card.text}</div>
                     <div class="admin-card-meta">
-                        ${card.consequence}
+                        ${rewardSummary}${card.special ? ' | ' + card.special : ''}
                         ${exp ? `<span class="expansion-badge" style="background: ${exp.color}">${exp.name}</span>` : ''}
                     </div>
                 </div>
@@ -256,6 +284,18 @@ function renderAdminSpiritCards() {
     if (cards.length === 0) {
         container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No cards found</p>';
     }
+}
+
+function summarizeRewards(rewards) {
+    if (!rewards) return 'No rewards';
+    const parts = [];
+    for (const [key, value] of Object.entries(rewards)) {
+        if (value !== 0) {
+            const label = REWARD_ICONS[key]?.label || key;
+            parts.push(`${value > 0 ? '+' : ''}${value} ${label}`);
+        }
+    }
+    return parts.length > 0 ? parts.join(', ') : 'No token changes';
 }
 
 function editSpiritCard(id) {
@@ -319,46 +359,6 @@ function deleteChoiceCard(id) {
     }
 }
 
-// Fame Cards Admin
-function renderAdminFameCards() {
-    const cards = dataManager.getFameCards();
-
-    const container = document.getElementById('fame-cards-admin');
-    container.innerHTML = cards.map(card => `
-        <div class="admin-card-item">
-            <div class="admin-card-content">
-                <div class="admin-card-text">${card.name}</div>
-                <div class="admin-card-meta">
-                    Roll: ${card.roll} | Reward: ${card.reward}
-                </div>
-            </div>
-            <div class="admin-card-actions">
-                <button class="btn btn-edit" onclick="editFameCard('${card.id}')">Edit</button>
-                <button class="btn btn-delete" onclick="deleteFameCard('${card.id}')">Delete</button>
-            </div>
-        </div>
-    `).join('');
-
-    if (cards.length === 0) {
-        container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No cards found</p>';
-    }
-}
-
-function editFameCard(id) {
-    const cards = dataManager.getFameCards();
-    const card = cards.find(c => c.id === id);
-    if (card) {
-        openCardModal('fame', card);
-    }
-}
-
-function deleteFameCard(id) {
-    if (confirm('Are you sure you want to delete this card?')) {
-        dataManager.deleteFameCard(id);
-        renderAdminFameCards();
-    }
-}
-
 // Expansions Admin
 function renderAdminExpansions() {
     const expansions = dataManager.getExpansions();
@@ -401,13 +401,22 @@ function openCardModal(type, existingCard = null) {
     const modal = document.getElementById('card-modal');
     const title = document.getElementById('modal-title');
 
-    // Reset form
-    document.getElementById('card-form').reset();
+    // Reset all number inputs to 0
+    const rewardTypes = ['elder', 'grandparent', 'family', 'staff', 'youth', 'endurance', 'church', 'complaint', 'fame'];
 
-    // Set type
+    document.getElementById('card-form').reset();
     document.getElementById('card-type').value = type;
 
-    // Show/hide appropriate fields
+    // Reset all reward inputs
+    rewardTypes.forEach(r => {
+        const spiritEl = document.getElementById(`spirit-${r}`);
+        const choiceAEl = document.getElementById(`choice-a-${r}`);
+        const choiceBEl = document.getElementById(`choice-b-${r}`);
+        if (spiritEl) spiritEl.value = 0;
+        if (choiceAEl) choiceAEl.value = 0;
+        if (choiceBEl) choiceBEl.value = 0;
+    });
+
     document.querySelectorAll('.card-type-fields').forEach(el => el.classList.add('hidden'));
 
     if (type === 'spirit') {
@@ -418,31 +427,43 @@ function openCardModal(type, existingCard = null) {
         document.getElementById('choice-fields').classList.remove('hidden');
         document.getElementById('expansion-select-group').classList.remove('hidden');
         title.textContent = existingCard ? 'Edit Choice Card' : 'Add Choice Card';
-    } else if (type === 'fame') {
-        document.getElementById('fame-fields').classList.remove('hidden');
-        document.getElementById('expansion-select-group').classList.add('hidden');
-        title.textContent = existingCard ? 'Edit Fame Card' : 'Add Fame Card';
     }
 
-    // Fill in existing data if editing
     if (existingCard) {
         document.getElementById('card-id').value = existingCard.id;
+        document.getElementById('card-text').value = existingCard.text;
+        document.getElementById('card-expansion').value = existingCard.expansion;
 
         if (type === 'spirit') {
-            document.getElementById('card-text').value = existingCard.text;
-            document.getElementById('spirit-consequence').value = existingCard.consequence;
-            document.getElementById('card-expansion').value = existingCard.expansion;
+            if (existingCard.rewards) {
+                rewardTypes.forEach(r => {
+                    const el = document.getElementById(`spirit-${r}`);
+                    if (el && existingCard.rewards[r] !== undefined) {
+                        el.value = existingCard.rewards[r];
+                    }
+                });
+            }
+            document.getElementById('spirit-special').value = existingCard.special || '';
         } else if (type === 'choice') {
-            document.getElementById('card-text').value = existingCard.text;
             document.getElementById('choice-a-text').value = existingCard.choiceA.text;
-            document.getElementById('choice-a-consequence').value = existingCard.choiceA.consequence;
             document.getElementById('choice-b-text').value = existingCard.choiceB.text;
-            document.getElementById('choice-b-consequence').value = existingCard.choiceB.consequence;
-            document.getElementById('card-expansion').value = existingCard.expansion;
-        } else if (type === 'fame') {
-            document.getElementById('card-text').value = existingCard.name;
-            document.getElementById('fame-roll').value = existingCard.roll;
-            document.getElementById('fame-reward').value = existingCard.reward;
+
+            if (existingCard.choiceA.rewards) {
+                rewardTypes.forEach(r => {
+                    const el = document.getElementById(`choice-a-${r}`);
+                    if (el && existingCard.choiceA.rewards[r] !== undefined) {
+                        el.value = existingCard.choiceA.rewards[r];
+                    }
+                });
+            }
+            if (existingCard.choiceB.rewards) {
+                rewardTypes.forEach(r => {
+                    const el = document.getElementById(`choice-b-${r}`);
+                    if (el && existingCard.choiceB.rewards[r] !== undefined) {
+                        el.value = existingCard.choiceB.rewards[r];
+                    }
+                });
+            }
         }
     }
 
@@ -458,41 +479,47 @@ function saveCard(event) {
 
     const type = document.getElementById('card-type').value;
     const id = document.getElementById('card-id').value || null;
+    const rewardTypes = ['elder', 'grandparent', 'family', 'staff', 'youth', 'endurance', 'church', 'complaint', 'fame'];
 
     if (type === 'spirit') {
+        const rewards = {};
+        rewardTypes.forEach(r => {
+            rewards[r] = parseInt(document.getElementById(`spirit-${r}`).value) || 0;
+        });
+
         const card = {
             id: id,
             text: document.getElementById('card-text').value,
-            consequence: document.getElementById('spirit-consequence').value,
+            rewards: rewards,
+            special: document.getElementById('spirit-special').value || '',
             expansion: document.getElementById('card-expansion').value
         };
         dataManager.saveSpiritCard(card);
         renderAdminSpiritCards();
+
     } else if (type === 'choice') {
+        const choiceARewards = {};
+        const choiceBRewards = {};
+        rewardTypes.forEach(r => {
+            choiceARewards[r] = parseInt(document.getElementById(`choice-a-${r}`).value) || 0;
+            choiceBRewards[r] = parseInt(document.getElementById(`choice-b-${r}`).value) || 0;
+        });
+
         const card = {
             id: id,
             text: document.getElementById('card-text').value,
             choiceA: {
                 text: document.getElementById('choice-a-text').value,
-                consequence: document.getElementById('choice-a-consequence').value
+                rewards: choiceARewards
             },
             choiceB: {
                 text: document.getElementById('choice-b-text').value,
-                consequence: document.getElementById('choice-b-consequence').value
+                rewards: choiceBRewards
             },
             expansion: document.getElementById('card-expansion').value
         };
         dataManager.saveChoiceCard(card);
         renderAdminChoiceCards();
-    } else if (type === 'fame') {
-        const card = {
-            id: id,
-            name: document.getElementById('card-text').value,
-            roll: parseInt(document.getElementById('fame-roll').value),
-            reward: document.getElementById('fame-reward').value
-        };
-        dataManager.saveFameCard(card);
-        renderAdminFameCards();
     }
 
     closeCardModal();
@@ -541,6 +568,5 @@ function saveExpansion(event) {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
-    // Show main menu
     showScreen('main-menu');
 });
