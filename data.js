@@ -474,6 +474,9 @@ const DEFAULT_CHOICE_CARDS = [
     }
 ];
 
+// Data version - increment this to force a data refresh
+const DATA_VERSION = 2;
+
 // Data Storage Manager
 class DataManager {
     constructor() {
@@ -481,12 +484,22 @@ class DataManager {
             expansions: 'deconstruction_expansions',
             spiritCards: 'deconstruction_spirit_cards',
             choiceCards: 'deconstruction_choice_cards',
-            drawnCards: 'deconstruction_drawn_cards'
+            drawnCards: 'deconstruction_drawn_cards',
+            dataVersion: 'deconstruction_data_version'
         };
         this.initializeData();
     }
 
     initializeData() {
+        // Check if data version has changed - if so, reset to defaults
+        const storedVersion = localStorage.getItem(this.storageKeys.dataVersion);
+        if (storedVersion !== String(DATA_VERSION)) {
+            console.log('Data version changed, resetting to defaults...');
+            this.resetToDefaults();
+            localStorage.setItem(this.storageKeys.dataVersion, String(DATA_VERSION));
+            return;
+        }
+
         if (!localStorage.getItem(this.storageKeys.expansions)) {
             localStorage.setItem(this.storageKeys.expansions, JSON.stringify(DEFAULT_EXPANSIONS));
         }
