@@ -7,13 +7,23 @@
     --gold-color: #f4d03f;
     --spirit-color: #6b4c9a;
     --choice-color: #2d6a4f;
-    --fame-color: #d4a017;
     --text-color: #eaeaea;
     --text-muted: #888;
     --card-bg: #0f0f1a;
     --modal-bg: rgba(0, 0, 0, 0.85);
     --success-color: #27ae60;
     --danger-color: #c0392b;
+
+    /* Token Colors */
+    --elder-color: #9b59b6;
+    --grandparent-color: #3498db;
+    --family-color: #27ae60;
+    --staff-color: #f39c12;
+    --youth-color: #e74c3c;
+    --endurance-color: #1abc9c;
+    --church-color: #ecf0f1;
+    --complaint-color: #c0392b;
+    --fame-color: #f1c40f;
 }
 
 * {
@@ -61,22 +71,24 @@ body {
 
 .logo-container {
     margin-bottom: 40px;
+    padding: 0 10px;
 }
 
 .game-title {
-    font-size: 3.5rem;
+    font-size: clamp(1.8rem, 8vw, 3.5rem);
     font-weight: 800;
-    letter-spacing: 0.3rem;
+    letter-spacing: clamp(0.1rem, 1vw, 0.3rem);
     background: linear-gradient(135deg, var(--gold-color) 0%, var(--accent-color) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
     text-shadow: 0 0 30px rgba(233, 69, 96, 0.3);
     margin-bottom: 10px;
+    word-break: break-word;
 }
 
 .tagline {
-    font-size: 1.2rem;
+    font-size: clamp(0.9rem, 3vw, 1.2rem);
     color: var(--text-muted);
     font-style: italic;
 }
@@ -87,6 +99,7 @@ body {
     gap: 15px;
     width: 100%;
     max-width: 350px;
+    padding: 0 20px;
 }
 
 .game-info {
@@ -200,6 +213,14 @@ body {
     font-size: 2.5rem;
 }
 
+.btn-draw-new {
+    width: 100%;
+    max-width: 300px;
+    margin: 20px auto;
+    padding: 18px 30px;
+    font-size: 1.2rem;
+}
+
 /* Back Button */
 .back-btn {
     background: transparent;
@@ -223,11 +244,25 @@ body {
     margin: 30px 0;
 }
 
+.card-type-buttons.hidden {
+    display: none;
+}
+
+.draw-new-container {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.draw-new-container.hidden {
+    display: none;
+}
+
 .expansion-selector {
     background: var(--card-bg);
     padding: 20px;
     border-radius: 10px;
-    margin-bottom: 20px;
+    margin-top: auto;
 }
 
 .expansion-selector label {
@@ -351,9 +386,82 @@ body {
 .card-consequence h4 {
     font-size: 0.9rem;
     color: var(--gold-color);
-    margin-bottom: 8px;
+    margin-bottom: 12px;
 }
 
+/* Reward Icons Display */
+.reward-icons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+}
+
+.reward-icon {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    min-width: 60px;
+}
+
+.reward-icon.gain {
+    border: 2px solid var(--success-color);
+}
+
+.reward-icon.lose {
+    border: 2px solid var(--danger-color);
+}
+
+.reward-icon .icon {
+    font-size: 1.8rem;
+    margin-bottom: 4px;
+}
+
+.reward-icon .amount {
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.reward-icon .amount.positive {
+    color: var(--success-color);
+}
+
+.reward-icon .amount.negative {
+    color: var(--danger-color);
+}
+
+.reward-icon .label {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+/* Token icon colors */
+.reward-icon.elder .icon { color: var(--elder-color); }
+.reward-icon.grandparent .icon { color: var(--grandparent-color); }
+.reward-icon.family .icon { color: var(--family-color); }
+.reward-icon.staff .icon { color: var(--staff-color); }
+.reward-icon.youth .icon { color: var(--youth-color); }
+.reward-icon.endurance .icon { color: var(--endurance-color); }
+.reward-icon.church .icon { color: var(--church-color); }
+.reward-icon.complaint .icon { color: var(--complaint-color); }
+.reward-icon.fame .icon { color: var(--fame-color); }
+
+.special-effect {
+    margin-top: 15px;
+    padding: 10px;
+    background: rgba(244, 208, 63, 0.1);
+    border: 1px dashed var(--gold-color);
+    border-radius: 8px;
+    text-align: center;
+    color: var(--gold-color);
+    font-style: italic;
+}
+
+/* Choice Card Styles */
 .choice-options {
     display: flex;
     flex-direction: column;
@@ -370,14 +478,23 @@ body {
     transition: all 0.3s;
 }
 
-.choice-option:hover {
+.choice-option:hover:not(.disabled) {
     border-color: var(--choice-color);
     background: rgba(45, 106, 79, 0.2);
+}
+
+.choice-option.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .choice-option.selected {
     border-color: var(--gold-color);
     background: rgba(244, 208, 63, 0.1);
+}
+
+.choice-option.revealed {
+    cursor: default;
 }
 
 .choice-label {
@@ -391,110 +508,18 @@ body {
 }
 
 .choice-consequence {
-    font-size: 0.9rem;
-    color: var(--text-muted);
     padding-top: 10px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Card History */
-.card-history {
-    margin-top: 40px;
-    padding-top: 20px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+.choice-consequence.hidden-consequence {
+    display: none;
 }
 
-.card-history h3 {
+.choice-consequence h5 {
+    font-size: 0.8rem;
     color: var(--text-muted);
-    font-size: 0.9rem;
-    margin-bottom: 15px;
-}
-
-#history-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.history-item {
-    background: var(--card-bg);
-    padding: 12px 15px;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.history-item .type-badge {
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-}
-
-.history-item .type-badge.spirit {
-    background: var(--spirit-color);
-}
-
-.history-item .type-badge.choice {
-    background: var(--choice-color);
-}
-
-/* Fame Cards Grid */
-.fame-cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 20px;
-    margin-top: 20px;
-}
-
-.fame-card {
-    background: linear-gradient(135deg, var(--card-bg) 0%, #1a1a30 100%);
-    border: 2px solid var(--fame-color);
-    border-radius: 12px;
-    padding: 20px;
-    position: relative;
-    overflow: hidden;
-}
-
-.fame-card::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -50%;
-    width: 100%;
-    height: 100%;
-    background: radial-gradient(circle, rgba(244, 208, 63, 0.1) 0%, transparent 70%);
-}
-
-.fame-roll-number {
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    font-size: 2rem;
-    font-weight: 800;
-    color: var(--fame-color);
-    opacity: 0.3;
-}
-
-.fame-card-name {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 10px;
-    color: var(--gold-color);
-}
-
-.fame-card-reward {
-    font-size: 0.95rem;
-    color: var(--text-color);
-}
-
-.fame-card-roll {
-    margin-top: 10px;
-    font-size: 0.85rem;
-    color: var(--text-muted);
+    margin-bottom: 8px;
 }
 
 /* PIN Entry */
@@ -579,6 +604,8 @@ body {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .filter-bar {
@@ -662,7 +689,7 @@ body {
     background: var(--secondary-color);
     padding: 30px;
     border-radius: 15px;
-    max-width: 500px;
+    max-width: 600px;
     width: 90%;
     max-height: 90vh;
     overflow-y: auto;
@@ -723,6 +750,43 @@ body {
     display: none;
 }
 
+.form-section-title {
+    color: var(--gold-color);
+    margin: 20px 0 15px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Reward Input Grid */
+.reward-inputs {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.reward-input-group {
+    background: var(--card-bg);
+    padding: 10px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.reward-input-group label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 5px;
+}
+
+.reward-input-group input {
+    width: 100%;
+    padding: 8px;
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
 .form-actions {
     display: flex;
     gap: 10px;
@@ -732,10 +796,6 @@ body {
 
 /* Responsive */
 @media (max-width: 768px) {
-    .game-title {
-        font-size: 2.5rem;
-    }
-
     .card-type-buttons {
         flex-direction: column;
     }
@@ -759,6 +819,29 @@ body {
     .admin-card-actions {
         width: 100%;
         justify-content: flex-end;
+    }
+
+    .reward-inputs {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .reward-icons {
+        gap: 6px;
+    }
+
+    .reward-icon {
+        min-width: 50px;
+        padding: 6px 8px;
+    }
+
+    .reward-icon .icon {
+        font-size: 1.4rem;
+    }
+}
+
+@media (max-width: 400px) {
+    .reward-inputs {
+        grid-template-columns: repeat(2, 1fr);
     }
 }
 
